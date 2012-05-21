@@ -7,9 +7,9 @@ NOTE: I don't intend to update this forked project much in the near term as I do
 
 This fork is primarily to offer the code changes I made to the original, particularly a WebDriverBackedSelenium class (and TestCase class for PHPUnit) that are not available in the original. And submitting patches to the project was less effective than forking it, in terms of further updates to patches.
 
-----------------------------
-Readme from origina project:
-----------------------------
+-----------------------------
+Readme from original project:
+-----------------------------
 
 PHPWebdriver 
 

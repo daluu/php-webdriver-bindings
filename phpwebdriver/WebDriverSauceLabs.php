@@ -15,6 +15,13 @@
   See the License for the specific language governing permissions and
   limitations under the License.
  */
+ 
+ /**
+  * NOTE: This is a modified version of WebDriver.php for use with
+  * SauceLabs. It has extra parameter(s) like name in connect method
+  * for connecting to SauceLabs. It may or may not be easily
+  * backward-compatible with the regular WebDriver.
+ */
 
 require_once 'WebDriverBase.php';
 require_once 'WebElement.php';
@@ -33,7 +40,7 @@ class WebDriver extends WebDriverBase {
      * @param $version 	The browser version, or the empty string if unknown. 
      * @param $caps  array with capabilities see: http://code.google.com/p/selenium/wiki/JsonWireProtocol#/session
     */
-    public function connect($browserName="firefox", $version="", $caps=array()) {
+    public function connect($browserName="firefox", $version="", $name='Running a test with php-webdriver-bindings on SauceLabs', $caps=array()) {
         $request = $this->requestURL . "/session";
         $session = $this->curlInit($request);
     $allCaps = 	
@@ -46,6 +53,7 @@ class WebDriver extends WebDriverBase {
               array(
                   'browserName'=>$browserName,
                   'version'=>$version,
+                  'name'=>$name,
                  )
         );
     $params = array( 'desiredCapabilities' =>	$allCaps );

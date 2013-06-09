@@ -1,7 +1,7 @@
 <?php
 
 if(is_file('../definedVars.php')) require_once '../definedVars.php';
-require_once 'phpwebdriver/WebDriver.php';
+require_once '../phpwebdriver/WebDriver.php';
 
 /**
  * 
@@ -13,7 +13,7 @@ class PHPWebDriverTest extends PHPUnit_Framework_TestCase {
 
     protected function setUp() {
         $this->webdriver = new WebDriver("localhost", 4444);
-        $this->webdriver->connect("firefox");
+		$this->webdriver->connect("firefox");
     }
 
     protected function tearDown() {
@@ -26,10 +26,11 @@ class PHPWebDriverTest extends PHPUnit_Framework_TestCase {
 
         $element = $this->webdriver->findElementBy(LocatorStrategy::id, "file1");
         $this->assertNotNull($element);
-
-        $element->sendKeys(array(EG_FILE_DIRECTORY . EG_FILE_NAME));
+		$remoteNodeLocation = $this->webdriver->sendFile(EG_FILE_DIRECTORY . EG_FILE_NAME);
+        $element->sendKeys(array($remoteNodeLocation));
+		//$element->sendKeys(array(EG_FILE_DIRECTORY . EG_FILE_NAME));
         $element->submit();
-        sleep(1);
+		sleep(1);
         $this->assertTrue($this->isTextPresent(EG_FILE_NAME));
     }
 	
@@ -256,6 +257,93 @@ class PHPWebDriverTest extends PHPUnit_Framework_TestCase {
         $this->assertTrue(strpos($src, "<body>") > 0);
         $this->assertTrue(strpos($src, "div1") > 0);
     }
+	
+	public function testImplicitWait(){
+		$this->webdriver->get("http://www.google.com");
+		$this->webdriver->setImplicitWaitTimeout(5*1000);
+		$starTime = time();
+		try{
+			$img = $this->webdriver->findElementBy(LocatorStrategy::id, "does not exist");
+		}catch(NoSuchElementException $e){
+			//do nothing, we wanted to test implicit wait (full timeout) on non-existant element
+		}		
+		$endTime = time();
+		$this->assertTrue(($endTime - $starTime) >= 5 ? TRUE : FALSE);
+	}
+	
+	public function testWindowHandling() {
+        $this->webdriver->get(TEST_URL);
+		$mainWinHandle = $this->webdriver->getWindowHandle();
+        $element = $this->webdriver->findElementBy(LocatorStrategy::linkText, "Open new popup window to Google");
+        $this->assertNotNull($element);
+        $element->click();
+		sleep(5); //give some arbitrary time for new window popup to open
+		$winHandles = $this->webdriver->getWindowHandles();
+		$this->assertEquals(2,count($winHandles));
+		$this->assertEquals($mainWinHandle,$winHandles[0]);
+		$this->webdriver->selectWindow($winHandles[1]);
+		$this->assertNotEquals("Test page",$this->webdriver->getTitle());
+		$this->webdriver->closeWindow();
+		$this->webdriver->selectWindow($mainWinHandle);
+		$this->assertEquals("Test page",$this->webdriver->getTitle());
+    }
+	
+	public function testMouseOver(){
+		$this->webdriver->get("http://homepage.ntlworld.com/bobosola/png_mouseover.htm");
+		$img = $this->webdriver->findElementBy(LocatorStrategy::id, "img100");
+		$this->assertEquals(1,preg_match("/logo_off.png$/",$img->getAttribute("src")));
+		$this->webdriver->moveTo($img);
+		$this->assertEquals(1,preg_match("/logo_on.png$/",$img->getAttribute("src")));
+	}
+	
+	public function testDragAndDrop(){
+		//originally, to use this test site/URL: http://jqueryui.com/droppable/
+		//but too much hassle to switch iframes, so let's directly go to the source page
+		$this->webdriver->get("http://jqueryui.com/resources/demos/droppable/default.html");
+		$srcDrag = $this->webdriver->findElementBy(LocatorStrategy::id, "draggable");
+		$targetDrop = $this->webdriver->findElementBy(LocatorStrategy::id, "droppable");
+		$stateChecker = $this->webdriver->findElementBy(LocatorStrategy::cssSelector, "#droppable > p");
+		$this->assertEquals("Drop here",$stateChecker->getText());
+		
+		$this->webdriver->moveTo($srcDrag);
+		$this->webdriver->buttonDown();
+		$this->webdriver->moveTo($targetDrop);
+		$this->webdriver->buttonUp();
+		sleep(2); //give time for UI to update for drag & drop operation
+		$stateChecker = $this->webdriver->findElementBy(LocatorStrategy::cssSelector, "#droppable > p");
+		$this->assertEquals("Dropped!",$stateChecker->getText());		
+	}
+	
+	public function testDragAndDropWithOffset(){
+		//originally, to use this test site/URL: http://jqueryui.com/droppable/
+		//but too much hassle to switch iframes, so let's directly go to the source page
+		$this->webdriver->get("http://jqueryui.com/resources/demos/droppable/default.html");
+		$srcDrag = $this->webdriver->findElementBy(LocatorStrategy::id, "draggable");
+		$targetDrop = $this->webdriver->findElementBy(LocatorStrategy::id, "droppable");
+		$stateChecker = $this->webdriver->findElementBy(LocatorStrategy::cssSelector, "#droppable > p");
+		$this->assertEquals("Drop here",$stateChecker->getText());
+		
+		$this->webdriver->moveTo($srcDrag,1,5);
+		$this->webdriver->buttonDown();
+		$this->webdriver->moveTo($targetDrop,10,20);
+		$this->webdriver->buttonUp();
+		sleep(2); //give time for UI to update for drag & drop operation
+		$stateChecker = $this->webdriver->findElementBy(LocatorStrategy::cssSelector, "#droppable > p");
+		$this->assertEquals("Dropped!",$stateChecker->getText());		
+	}
+	
+	public function testWindowMaximize(){
+		$this->webdriver->get("http://www.google.com");
+		/* TODO - maybe get size of current window before maximize,
+		 * then maximize window, then get size and verify size is
+		 * larger. But if window already maximized, that's a
+		 * different case. And can't compare with fixed size
+		 * since screen resolution is different across systems.
+		 * For now, just visually verify when running unit test
+		 * and confirm no failure/exception from test result.
+		 */
+		$this->webdriver->windowMaximize();		
+	}
 	
 	private function isTextPresent($text) {
 

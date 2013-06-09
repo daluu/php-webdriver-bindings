@@ -8,7 +8,6 @@
 <?php
 
     if(isset($_FILES['file1'])){
-        
         echo 'UPLOADED FILE: ';
         $file = dirname(__FILE__).'\\'.$_FILES['file1']['name'];
         
@@ -49,6 +48,8 @@ product name: <input type="text" name="product_name" id="prod_name" size="40" va
 <br/><div name="div1">lorem ipsum</div>
 
 <a href="javascript:sayHelloAlert('computer')">say hello (javascript)</a>
+<p>
+<a href="http://www.google.com" target="_blank">Open new popup window to Google</a>
 
 <script type="text/javascript">
 function sayHello(name) {

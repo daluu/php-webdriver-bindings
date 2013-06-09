@@ -136,7 +136,7 @@ class WebDriver extends WebDriverBase {
     }
 
     /**
-     * Get the current page title.
+     * Get the current page url.
      * @return string The current URL.
      */
     public function getCurrentUrl() {
@@ -228,7 +228,7 @@ class WebDriver extends WebDriverBase {
     $cookie = array('name'=>$name, 'value'=>$value, 'secure'=>$secure);
     if (!empty($cookie_path)) $cookie['path']=$cookie_path;
     if (!empty($domain)) $cookie['domain']=$domain;
-    if (!empty($expiry)) $cookie['expiry']=$exipry;
+    if (!empty($expiry)) $cookie['expiry']=$expiry;
         $args = array('cookie' => $cookie );
         $jsonData = json_encode($args);
         $this->preparePOST($session, $jsonData);
@@ -396,14 +396,10 @@ class WebDriver extends WebDriverBase {
         $data = base64_decode($img);
         $success = file_put_contents($png_filename, $data);
     }
-    
-    /*
-     * Methods below added to class as they were missing
-     * features of WebDriver API.
-     */
-    
+	
 	/**
-	 * Get the window handle of the current browser window
+	 * Retrieve the current window handle.
+	 * @return string current window handle.
     */
     public function getWindowHandle() {
         $request = $this->requestURL . "/window_handle";
@@ -412,7 +408,8 @@ class WebDriver extends WebDriverBase {
     }
     
 	/**
-	 * Get the window handles of all (open) browser windows
+	 * Retrieve the list of all window handles available to the session.
+	 * @return array list of window handles.
     */
     public function getWindowHandles() {
         $request = $this->requestURL . "/window_handles";
@@ -421,7 +418,14 @@ class WebDriver extends WebDriverBase {
     }
     
 	/**
-	 * Set implicit wait timeout for Web Driver
+	 * Set the amount of time the driver should wait when searching for elements. 
+	 * When searching for a single element, the driver should poll the page until an element is found or the timeout expires, whichever occurs first. 
+	 * When searching for multiple elements, the driver should poll the page until at least one element is found or the timeout expires, at which point it should return an empty list.
+	 * 
+	 * If this command is never sent, the driver should default to an implicit wait of 0ms.
+	 * 
+	 * @param integer ms
+	 * the amount of time to wait, in milliseconds. This value has a lower bound of 0.
     */
     public function setImplicitWaitTimeout($waitTimeout) {
         $request = $this->requestURL . "/timeouts/implicit_wait";        
@@ -433,56 +437,175 @@ class WebDriver extends WebDriverBase {
     }
     
     /**
- * Move the mouse by an offset of the specificed element.
- * If no element is specified, the move is relative to the current mouse cursor.
- * If an element is provided but no offset, the mouse will be moved to the center of the element.
- * If the element is not visible, it will be scrolled into view.
- *
- * @param WebElement $element
- * ID of the element to move to. If not specified or is null,
- * the offset is relative to current position of the mouse.
- * @param integer $xoffset
- * X offset to move to, relative to the top-left corner of the element.
- * If not specified, the mouse will move to the middle of the element.
- * @param integer $yoffset
- * Y offset to move to, relative to the top-left corner of the element.
- * If not specified, the mouse will move to the middle of the element.
- * @return boolean true
- */
-public function moveTo(WebElement $element, $xoffset = null, $yoffset = null)
-{
-    $array = explode('/', $element->requestURL);
-    $id = $array[count($array) - 1];
-    $request = $this->requestURL . "/moveto";
-    $session = $this->curlInit($request);
-    $args = array('element' => $id, 'xoffset' => $xoffset, 'yoffset' => $yoffset);
-    $postargs = json_encode($args);
-    $this->preparePOST($session, $postargs);
-    $response = curl_exec($session);
-    $json_response = json_decode(trim($response));
-    return true;
-}
+	 * Move the mouse by an offset of the specificed element.
+	 * If no element is specified, the move is relative to the current mouse cursor.
+	 * If an element is provided but no offset, the mouse will be moved to the center of the element.
+	 * If the element is not visible, it will be scrolled into view.
+	 *
+	 * @param WebElement $element
+	 * ID of the element to move to. If not specified or is null,
+	 * the offset is relative to current position of the mouse.
+	 * @param integer $xoffset
+	 * X offset to move to, relative to the top-left corner of the element.
+	 * If not specified, the mouse will move to the middle of the element.
+	 * @param integer $yoffset
+	 * Y offset to move to, relative to the top-left corner of the element.
+	 * If not specified, the mouse will move to the middle of the element.
+	 */
+	public function moveTo($element = null, $xoffset = null, $yoffset = null)
+	{
+		$request = $this->requestURL . "/moveto";
+	    $session = $this->curlInit($request);
+		
+	    $array = explode('/', $element->requestURL);		
+	    $id = $array[count($array) - 1];		
+		$args = array();
+		if($element) $args['element'] = $id;
+		if($xoffset) $args['xoffset'] = intval($xoffset);
+		if($yoffset) $args['yoffset'] = intval($yoffset);
+		if(empty($args))
+			$this->preparePOST($session, null);
+		else{
+			$postargs = json_encode($args);
+	    	$this->preparePOST($session, $postargs);
+		}
+		curl_exec($session);
+	}
 
-public function buttonDown()
-{
-	$request = $this->requestURL . "/buttondown";
-        $session = $this->curlInit($request);
-        $this->preparePOST($session, null);
-        $response = curl_exec($session);
-	$json_response = json_decode(trim($response));
-	return true;
-}
+	/**
+	 * Click and hold the left mouse button (at the coordinates set by the last moveto command). 
+	 * Note that the next mouse-related command that should follow is buttonUp() . 
+	 * Any other mouse command (such as click() or another call to buttonDown()) will yield undefined behaviour.
+	 * 
+	 * @param integer $button
+	 * Which button, enum: {LEFT = 0, MIDDLE = 1 , RIGHT = 2}. 
+	 * Defaults to the left mouse button if not specified.
+	 */
+	public function buttonDown()
+	{
+		$request = $this->requestURL . "/buttondown";
+	    $session = $this->curlInit($request);
+	    $this->preparePOST($session, null);
+		curl_exec($session);
+	}
+	/**
+	 * Releases the mouse button previously held (where the mouse is currently at). 
+	 * Must be called once for every buttonDown() command issued. 
+	 * See the note in click and buttonDown() about implications of out-of-order commands.
+	 * 
+	 * @param integer $button
+	 * Which button, enum: {LEFT = 0, MIDDLE = 1 , RIGHT = 2}. 
+	 * Defaults to the left mouse button if not specified.
+	 */
+	public function buttonUp()
+	{
+		$request = $this->requestURL . "/buttonup";
+	    $session = $this->curlInit($request);
+	    $this->preparePOST($session, null);
+		curl_exec($session);
+	}
+	
+	/**
+	 * Maximize the specified window if not already maximized. 
+	 * If the :windowHandle URL parameter is "current", the currently active window will be maximized.
+	 */
+	public function windowMaximize($windowHandle = null)
+	{
+		if($windowHandle)
+			$request = $this->requestURL . "/window/" . $windowHandle . "/maximize";
+		else
+			$request = $this->requestURL . "/window/current/maximize";
+	    $session = $this->curlInit($request);
+	    $this->preparePOST($session, null);
+		curl_exec($session);
+	}
 
-public function buttonUp()
-{
-	$request = $this->requestURL . "/buttonup";
-        $session = $this->curlInit($request);
-        $this->preparePOST($session, null);
-	$response = curl_exec($session);
-	$json_response = json_decode(trim($response));
-	return true;
-}
+	/**
+	 * Special (hidden/unofficial) WebDriver API method to send over a file to a
+	 * RemoteWebDriver node or a Selenium Grid node for use in file uploads with
+	 * WebElement->sendKeys() method. 
+	 * The method will return the local URL of the file you uploaded, 
+	 * which will then let you use sendKeys in file input elements
+	 * 
+ 	 * @params string $value - path to a local or remote file to send
+ 	 * @return string the local directory where the file resides on the remote node/server
+	 */
+	public function sendFile($path, $file_extension = '')
+	{
+		$zip = new ZipArchive();
 
+	    $filename_hash = basename($path);
+	
+	    $zip_filename = "{$filename_hash}.zip";
+	    if( $zip->open($zip_filename, ZIPARCHIVE::CREATE) === false ) {
+	        echo 'WebDriver sendFile $zip->open failed\n';
+	        return false;
+	    }
+	
+	    $file_data = @file_get_contents($path);
+	    if( $file_data === false ) {
+	        throw new Exception('WebDriver sendFile file_get_contents failed');
+	    }
+	
+	    $filename = "{$filename_hash}.{$file_extension}";
+	    if( @file_put_contents($filename, $file_data) === false ) {
+	        throw new Exception('WebDriver sendFile file_put_contents failed');
+	    }
+	
+	    $zip->addFile($filename, "{$filename_hash}.{$file_extension}");
+	    $zip->close();
+	
+	    $zip_file = @file_get_contents($zip_filename);
+	    if( $zip_file === false ) {
+	        throw new Exception('WebDriver sendFile file_get_contents for $zip_file failed');
+	    }
+	
+	    $file = base64_encode($zip_file);
+	
+	    $request = $this->requestURL . "/file";
+	    $session = $this->curlInit($request);
+	    $args = array( 'file' => $file );
+	    $postargs = json_encode($args);
+	    $this->preparePOST($session, $postargs);
+	    $response = trim(curl_exec($session));
+	
+	    return $this->extractValueFromJsonResponse($response);
+	}
+	
+	/**
+	 * Special non-WebDriver API method to prepare a (Firefox, and maybe Chrome)
+	 * browser profile to pass as part of DesiredCapabilities to use it in WebDriver session.
+	 *  
+	 * This method creates a zip file from the specified profile directory
+	 * and then base64 encodes it for sending as part of DesiredCapabilities object.
+	 * 
+ 	 * @params string $path - path to a local (Firefox, and maybe Chrome) browser profile
+ 	 * @return string the base64 encoded value of a zip file of the profile content
+	 */
+	public function prepareBrowserProfile($path, $file_extension = '')
+	{
+		$folderName = basename($path);
+		$rootPath = dirname($path);
+		$zipFile = $rootPath."/".$folderName.".zip";
+		
+		
+		$zip = new ZipArchive;
+		$zip->open($zipFile, ZipArchive::CREATE);
+		
+		if (false !== ($dir = opendir($path)))
+		{
+			while (false !== ($file = readdir($dir)))
+		    {
+		    	if ($file != '.' && $file != '..')
+		        	$zip->addFile($path.DIRECTORY_SEPARATOR.$file);
+		    }
+		}else{
+		         die('Can\'t read dir');
+		}
+		$zip->close();
+	    return base64_encode($zipFile);
+	}
+	
 }
 
 ?>
